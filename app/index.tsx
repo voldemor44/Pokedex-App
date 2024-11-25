@@ -15,13 +15,22 @@ import PokemonCard from "@/components/pokemon/PokemonCard";
 import { useAxiosQuery } from "@/hooks/useAxiosQuery";
 import { useEffect, useState } from "react";
 import { getPokemonId } from "@/functions/pokemon";
+import SearchBar from "@/components/SearchBar";
+import Row from "@/components/Row";
+
+type Pokemon = {
+  name: string;
+  url: string;
+};
 
 export default function Index() {
   const colors = useThemeColors();
-  const [pokemons, setPokemons] = useState<any[]>([]);
+  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+  const [filteredpokemons, setFilteredPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [search, setSearch] = useState("");
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
@@ -56,9 +65,22 @@ export default function Index() {
     fetchPokemons();
   }, [page]);
 
+  useEffect(() => {
+    if (search) {
+      const filtered = pokemons.filter(
+        (p) =>
+          p.name.includes(search.toLowerCase()) ||
+          getPokemonId(p.url).toString() === search
+      );
+      setFilteredPokemons(filtered);
+    } else {
+      setFilteredPokemons(pokemons);
+    }
+  }, [search, pokemons]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.tint }]}>
-      <View style={styles.header}>
+      <Row style={styles.header} gap={16}>
         <Image
           source={require("@/assets/images/pokeball.png")}
           width={24}
@@ -67,18 +89,20 @@ export default function Index() {
         <ThemedText variant="headline" color="grayLight">
           Pokédex
         </ThemedText>
-      </View>
-
+      </Row>
+      <Row>
+        <SearchBar value={search} onChange={setSearch} />
+      </Row>
       <Card style={styles.body}>
         <FlatList
-          data={pokemons}
+          data={filteredpokemons}
           numColumns={3}
           contentContainerStyle={[styles.gridGap, styles.list]} // Espacement verticale
           columnWrapperStyle={styles.gridGap} // Espacement horizontale
           ListFooterComponent={
             loading ? <ActivityIndicator color={colors.tint} /> : null
           } // Loader
-          onEndReached={handleLoadMore}
+          onEndReached={search ? undefined : handleLoadMore}
           renderItem={({ item }) => (
             <PokemonCard
               id={getPokemonId(item.url)}
@@ -94,12 +118,9 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 4 },
+  container: { flex: 1, padding: 4, gap: 16 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    padding: 15,
+    padding: 12,
   },
   body: { flex: 1 },
   gridGap: {
