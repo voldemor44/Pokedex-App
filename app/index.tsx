@@ -17,11 +17,9 @@ import { useEffect, useState } from "react";
 import { getPokemonId } from "@/functions/pokemon";
 import SearchBar from "@/components/SearchBar";
 import Row from "@/components/Row";
+import SortButton from "@/components/SortButton";
 
-type Pokemon = {
-  name: string;
-  url: string;
-};
+type Pokemon = { id: number; name: string };
 
 export default function Index() {
   const colors = useThemeColors();
@@ -31,6 +29,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<"id" | "name">("id");
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
@@ -47,7 +46,10 @@ export default function Index() {
       await useAxiosQuery(page).then((response) => {
         setPokemons((prevPokemons) => [
           ...prevPokemons,
-          ...response.data.results,
+          ...response.data.results.map((r: { url: string; name: any }) => ({
+            id: getPokemonId(r.url),
+            name: r.name,
+          })),
         ]);
 
         if (response.data.results.length < 21) {
@@ -66,16 +68,17 @@ export default function Index() {
   }, [page]);
 
   useEffect(() => {
-    if (search) {
-      const filtered = pokemons.filter(
-        (p) =>
-          p.name.includes(search.toLowerCase()) ||
-          getPokemonId(p.url).toString() === search
-      );
-      setFilteredPokemons(filtered);
-    } else {
-      setFilteredPokemons(pokemons);
-    }
+    const filtered = [
+      ...(search
+        ? pokemons.filter(
+            (p) =>
+              p.name.includes(search.toLowerCase()) ||
+              p.id.toString() === search
+          )
+        : pokemons),
+    ].sort((a, b) => (a[sortKey] < b[sortKey] ? -1 : 1));
+
+    setFilteredPokemons(filtered);
   }, [search, pokemons]);
 
   return (
@@ -90,8 +93,9 @@ export default function Index() {
           Pokédex
         </ThemedText>
       </Row>
-      <Row>
+      <Row gap={16}>
         <SearchBar value={search} onChange={setSearch} />
+        <SortButton value={sortKey} onChange={setSortKey} />
       </Row>
       <Card style={styles.body}>
         <FlatList
@@ -105,12 +109,12 @@ export default function Index() {
           onEndReached={search ? undefined : handleLoadMore}
           renderItem={({ item }) => (
             <PokemonCard
-              id={getPokemonId(item.url)}
+              id={item.id}
               name={item.name}
               style={{ flex: 1 / 3 }}
             />
           )}
-          keyExtractor={(item, index) => `${item.url}${index + 1}`} //key of item
+          keyExtractor={(item, index) => `${item.id}${index + 1}`} //key of item
         />
       </Card>
     </SafeAreaView>
