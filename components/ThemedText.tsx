@@ -26,7 +26,7 @@ export function ThemedText({ variant, color, style, ...rest }: Props) {
       style={[
         styles[variant ?? "body3"],
         { color: myColors[color ?? "grayDark"] },
-        style
+        style,
       ]}
       {...rest}
     />
